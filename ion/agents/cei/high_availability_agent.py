@@ -180,7 +180,9 @@ class HighAvailabilityAgent(SimpleResourceAgent):
         return self.core.status()
 
     def rcmd_dump(self):
-        return self.core.dump()
+        dump = self.core.dump()
+        dump['service_id'] = self.service_id
+        return dump
 
 
 class HADashiHandler(object):

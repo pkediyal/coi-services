@@ -18,7 +18,7 @@ from pyon.util.unit_test import PyonTestCase
 from pyon.util.int_test import IonIntegrationTestCase
 from pyon.util.context import LocalContextMixin
 from pyon.core import bootstrap
-from pyon.core.exception import Timeout, BadRequest
+from pyon.core.exception import Timeout, BadRequest, NotFound
 
 from ion.agents.cei.high_availability_agent import HighAvailabilityAgentClient, \
     ProcessDispatcherSimpleAPIClient
@@ -126,7 +126,7 @@ class HighAvailabilityAgentTest(IonIntegrationTestCase):
         try:
             self.container.terminate_process(self._haa_pid)
         except BadRequest:
-            log.exception("Couldn't terminate HA Agent (May have been terminated by a test)")
+            log.warning("Couldn't terminate HA Agent in teardown (May have been terminated by a test)")
         self._stop_container()
 
     def get_running_procs(self):
@@ -203,10 +203,11 @@ class HighAvailabilityAgentTest(IonIntegrationTestCase):
 
         # Ensure that once the HA Agent starts, there is a Service object in
         # the registry
-        services_registered = self.get_new_services()
-        service_names = [i.name for i in services_registered]
-        self.assertEqual(len(service_names), 1)
-        service = services_registered[0]
+        result = self.haa_client.dump().result
+        service_id = result.get('service_id')
+        self.assertIsNotNone(service_id)
+        service = self.container.resource_registry.read(service_id)
+        self.assertIsNotNone(service)
 
         # Ensure that once a process is started, there is an association between
         # it and the service
@@ -244,8 +245,8 @@ class HighAvailabilityAgentTest(IonIntegrationTestCase):
         # cleaned up
         self.container.terminate_process(self._haa_pid)
 
-        services_registered = self.get_new_services()
-        self.assertEqual(len(services_registered), 0)
+        with self.assertRaises(NotFound):
+            service = self.container.resource_registry.read(service_id)
 
     def test_dashi(self):
 
