@@ -130,7 +130,7 @@ class HighAvailabilityAgentTest(IonIntegrationTestCase):
         self._stop_container()
 
     def get_running_procs(self):
-        """returns a normalized set of running procs (removes the ones that 
+        """returns a normalized set of running procs (removes the ones that
         were there at setup time)
         """
 
@@ -151,6 +151,17 @@ class HighAvailabilityAgentTest(IonIntegrationTestCase):
         current_names = [i.name for i in services_registered]
         normal = [cserv for cserv in services_registered if cserv.name not in base_names]
         return normal
+
+    def await_ha_state(self, want_state, timeout=10):
+
+        for i in range(0, timeout):
+            status = self.haa_client.status().result
+            if status == want_state:
+                return
+            gevent.sleep(1)
+
+        raise Exception("Took more than %s to get to ha state %s" % (timeout, want_state))
+
 
     def test_features(self):
         status = self.haa_client.status().result
@@ -216,6 +227,8 @@ class HighAvailabilityAgentTest(IonIntegrationTestCase):
         self.waiter.await_state_event(state=ProcessStateEnum.RUNNING)
         self.assertEqual(len(self.get_running_procs()), 1)
 
+        self.await_ha_state('STEADY')
+
         proc = self.get_running_procs()[0]
 
         processes_associated, _ = self.container.resource_registry.find_resources(
@@ -225,6 +238,8 @@ class HighAvailabilityAgentTest(IonIntegrationTestCase):
         has_processes = self.container.resource_registry.find_associations(
             service, "hasProcess")
         self.assertEqual(len(has_processes), 1)
+
+        self.await_ha_state('STEADY')
 
         # Ensure that once we terminate that process, there are no associations
         new_policy = {'preserve_n': 0}
@@ -366,7 +381,7 @@ class HighAvailabilityAgentSensorPolicyTest(IonIntegrationTestCase):
 
         self.pd_cli.create_process_definition(self.process_definition,
                 self.process_definition_id)
-       
+
 
         http_port = 8919
         http_port = self._start_webserver(port=http_port)
@@ -433,7 +448,7 @@ class HighAvailabilityAgentSensorPolicyTest(IonIntegrationTestCase):
         self._stop_container()
 
     def get_running_procs(self):
-        """returns a normalized set of running procs (removes the ones that 
+        """returns a normalized set of running procs (removes the ones that
         were there at setup time)
         """
 
