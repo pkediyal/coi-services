@@ -419,6 +419,11 @@ class TestResourceRegistry(IonIntegrationTestCase):
         att = Attachment(content=binary, attachment_type=AttachmentType.BLOB)
         aid1 = self.resource_registry_service.create_attachment(iid, att)
 
+        # verify that content can be included
+        att1 = self.resource_registry_service.read_attachment(aid1, True)
+        self.assertEquals(binary, att1.content)
+
+        # verify that content is excluded by default
         att1 = self.resource_registry_service.read_attachment(aid1)
         self.assertEquals(binary, att1.content)
 
@@ -427,7 +432,7 @@ class TestResourceRegistry(IonIntegrationTestCase):
         aid2 = self.resource_registry_service.create_attachment(iid, att)
 
         att1 = self.resource_registry_service.read_attachment(aid2)
-        self.assertEquals(binary, base64.decodestring(att1.content))
+        self.assertEquals(binary, att1.content)
 
         att_ids = self.resource_registry_service.find_attachments(iid, id_only=True)
         self.assertEquals(att_ids, [aid1, aid2])
